@@ -248,9 +248,10 @@ def _stoichiometry(target, precursors, reactant_amounts, balanced_left):
         out.update(status="off_stoichiometry" if excess else "balanced",
                    limiting_element=lim if excess else None, excess_pct_vs_limiting=excess)
     if out["status"] == "off_stoichiometry":
-        keys = {_norm_or_raw(p) for p in precursors}
+        names = {_norm_or_raw(p): p for p in precursors}  # report in the caller's spelling
         out["balanced_reactant_amounts"] = (
-            {f: c for f, c in balanced_left.items() if _norm_or_raw(f) in keys} if balanced_left else None
+            {names[_norm_or_raw(f)]: c for f, c in balanced_left.items() if _norm_or_raw(f) in names}
+            if balanced_left else None
         )
         out["action"] = ("Report this run as an off-stoichiometry data point, and also simulate "
                          "the balanced recipe.")
@@ -533,6 +534,26 @@ def route_impurities(
 
 @mcp.tool()
 @_quiet
+def check_stoichiometry(target: str, reactant_amounts: dict[str, float]) -> dict:
+    """Check a simulation recipe's molar amounts (e.g. a ReactCA reactants dict) against
+    the balanced equation for the target from those precursors: the dataset's when the
+    route is in the literature, else synthesis-similarity's balancer. Returns status
+    balanced | off_stoichiometry (limiting element, % excess of the others, missing
+    elements), extra elements (flux/dopant), the balanced equation, and for
+    off-stoichiometry the balanced amounts. Off-stoichiometry runs are valid data
+    points: report them, flagged, and also simulate the balanced amounts."""
+    for f in [target, *reactant_amounts]:
+        if err := _check_formula(f):
+            return {"error": err}
+    tkey = _normalize(target)
+    rows = _route_rows(tkey, "+".join(sorted({_normalize(p) for p in reactant_amounts}))) if LIT_T else []
+    bal = _balanced_equation(tkey, list(reactant_amounts), rows)
+    return {"target": tkey, "balanced_equation": bal["equation"], "equation_source": bal["source"],
+            **_stoichiometry(tkey, list(reactant_amounts), reactant_amounts, bal["left"])}
+
+
+@mcp.tool()
+@_quiet
 def complete_precursor_set(
     target: str, fixed_precursors: list[str], top_k: int = 10
 ) -> dict:
@@ -650,6 +671,10 @@ def _selftest():
     r = route_impurities("CaSnO3", ["CaO", "SnO2"], simulated_phases=["Ca2SnO4"])
     assert r["n_papers"] == 0 and r["simulation"]["secondary_phases"][0]["label"] == "no literature", r
     assert r["equation_source"] == "synthesis-similarity" and r["balanced_equation"], r
+    r = check_stoichiometry("Li4SiO4", {"Li2CO3": 1, "SiO2": 1})
+    assert r["status"] == "off_stoichiometry" and r["equation_source"] == "dataset", r
+    assert r["balanced_reactant_amounts"] == {"Li2CO3": 2.0, "SiO2": 1.0}, r
+    assert check_stoichiometry("LiTaO3", {"Li2CO3": 0.5, "Ta2O5": 0.5})["status"] == "balanced"
     print("SELFTEST OK")
     r = recommend_precursors("LiNi0.5Mn1.5O4", top_n=3)
     for rec_ in r["recommendations"]:

@@ -76,3 +76,7 @@ Like the rest of `rsc_impurity/`, the db is data (gitignored), not code.
     target. Off-stoichiometry runs are still compared and reported, but flagged, with the
     balanced amounts to simulate as well. The balanced equation comes from the dataset, or
     from the balancer for routes not in the literature.
+- **`check_stoichiometry(target, reactant_amounts)`**: only the ratio check, with the
+  balanced equation and the balanced amounts in the caller's formula spelling.
+
+How agents should use these tools: `skills/literature-evidence/SKILL.md`.
