@@ -25,14 +25,14 @@ import statistics
 import sys
 
 import numpy as np
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 from pymatgen.core import Composition
 
 from SynthesisSimilarity import PrecursorsRecommendation
 from SynthesisSimilarity.core.utils import formula_to_array, array_to_formula
 from SynthesisSimilarity.core.mat_featurization import featurize_list_of_composition
 
-mcp = MCPServer("synthesis-similarity")
+mcp = FastMCP("synthesis-similarity")
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 # rsc/ and rsc_impurity/ are data, not code: an installed server (uvx) needs their path

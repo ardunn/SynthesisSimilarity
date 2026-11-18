@@ -9,7 +9,8 @@ dependencies = [
     "keras==2.15.0",
     "numpy==1.26.4",
     "pymatgen==2026.5.4",
-    "mcp==2.0.0",
+    # 1.x, as as3: its langchain-mcp-adapters needs mcp < 2, and the two share an env
+    "mcp==1.27.1",
     "adjusttext==1.4.0",
     "colorcet==3.2.1",
     "gdown==6.1.0",
